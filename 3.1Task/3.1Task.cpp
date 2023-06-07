@@ -9,31 +9,63 @@
 #define N_3 120000
 #define N_4 150000
 
+static unsigned long long primary = 0, secondary = 0;
 
-
-unsigned long long cnt_arr = 0, cnt_help = 0;
-
-void QuickSort(int* a, int n)
+void NonRecursiveQuickSort(int* a, int n)
 {
-    int x, w, i, j;
-    x = a[n / 2];
-    i = 0; j = n - 1;
-    do
+    primary = secondary = 0;
+    clock_t start = clock();
+    const int M = log(n) / log(2) + 1;
+    int i, j, left, right, s, x, w;
+    struct stack { int left, right; } *stack;
+    stack = (struct stack*)malloc(M * sizeof(struct stack));
+    s = 0;
+    stack[0].left = 0;
+    stack[0].right = n - 1;
+
+    do /*выбор из стека последнего запроса*/
     {
-        while (++cnt_arr && a[i] < x) i++;
-        while (++cnt_arr && x < a[j]) j--;
-        if (++cnt_help && i <= j)
+        left = stack[s].left;
+        right = stack[s].right;
+        s--;
+        do /*разделение а[left]… a[right]*/
         {
-            w = a[i]; a[i] = a[j]; a[j] = w;
-            i++; j--;
-        }
-    }
-    while (++cnt_help && i < j);
-    if (++cnt_help && j > 0)
-        QuickSort(a, j + 1);
-    if (++cnt_help && i < n - 1)
-        QuickSort(a + i, n - i);
+            i = left; j = right;
+            x = a[(left + right) / 2];
+            do
+            {
+                while (++primary && a[i] < x) i++;
+                while (++primary && x < a[j]) j--;
+                if (++secondary && i <= j)                              
+                {
+                    w = a[i]; a[i] = a[j]; a[j] = w;
+                    i++; j--;
+                }
+            } while (++secondary && i < j);
+            if (++secondary && i < right && ++secondary && right - i >= j - left) /*если правая часть не меньше левой*/
+            { /*запись в стек границ правой части*/
+                s++;
+                stack[s].left = i;
+                stack[s].right = right;
+                right = j; /*теперь left и right ограничивают левую часть*/
+            }
+            else if (++secondary && j > left && ++secondary && j - left > right - i) /*если левая часть больше правой*/
+            { /*запись в стек границ левой части*/
+                s++;
+                stack[s].left = left;
+                stack[s].right = j;
+                left = i; /*теперь left и right ограничивают правую часть*/
+            }
+            else left = right; /*делить больше нечего, интервал "схлопывается"*/
+        } while (++secondary && left < right);
+    } while (++secondary && s > -1);
+    clock_t end = clock();
+    int memory = 8 * sizeof(int) + sizeof(struct stack*) + M * sizeof(struct stack);
+    double time = (double)(end - start) / CLOCKS_PER_SEC;
+    std::cout << "   time = " << time << " seconds" << std::endl << "   memory = " << memory << " bytes" << std::endl << "   primary operations = " << primary << std::endl << "   secondary operations = " << secondary << std::endl << std::endl;
+    free(stack);
 }
+
 
 void Merge(int a[], int split, int n) {
     /* Слияние упорядоченных частей массива в буфер temp
@@ -305,28 +337,26 @@ void copy_array(int N, int* in, int* out)
         in[i] = out[i];
 }
 
+void print_cnt()
+{
+    
 
+}
 void sorting(int* arr, int N, void (*sort)(int*, int), std::string name)
 {
     int* current_array = new int[N];
     copy_array(N, current_array, arr);
     std::cout << std::endl << std::endl << "   " << name << " for N = " << N << std::endl;
-    std::cout << " _____________________________________" << std::endl;
-    std::cout << "|                                     |" << std::endl;
-    std::cout << "   Disordered" << std::endl;
+    std::cout << " __________________________________" << std::endl;
+    std::cout << "|                                  |" << std::endl;
+    std::cout << "   Disordered:" << std::endl;
     sort(current_array, N);
-    std::cout << "Число сравнений элементов массива " << cnt_arr << " Число вспомогательных сравнений " << cnt_help << "\n";
-    std::cout << "   Ordered (min->max)" << std::endl;
-    cnt_arr = cnt_help = 0;
+    std::cout << "   Ordered (min->max):" << std::endl;
     sort(current_array, N);
-    std::cout << "Число сравнений элементов массива " << cnt_arr << " Число вспомогательных сравнений " << cnt_help << "\n";
-    cnt_arr = cnt_help = 0;
     std::reverse(current_array, current_array + N);
-    std::cout << "   Reverse ordered (max->min)" << std::endl;
+    std::cout << "   Reverse ordered (max->min):" << std::endl;
     sort(current_array, N);
-    std::cout << "Число сравнений элементов массива " << cnt_arr << " Число вспомогательных сравнений " << cnt_help << "\n";
-    std::cout << "|_____________________________________|" << std::endl;
-    cnt_arr = cnt_help = 0;
+    std::cout << "|__________________________________|" << std::endl;
     delete[] current_array;
 
 }
@@ -336,13 +366,12 @@ void sorting(int* arr, int N, void (*sort)(int*, int), std::string name)
 
 int main()
 {
-    setlocale(LC_ALL, "rus");
 	std::ifstream file("test_numbers.txt");
 	int* array = new int[N_4];
 	int values[4] = { N_1,N_2,N_3,N_4 };
 
-	void (*sort[4])(int*, int) = { QuickSort, MergeSortRecursive, NaturalMergeSort, TimSort };
-	std::string names[4] = { "QuickSort", "MergeSortRecursive", "NaturalMergeSort", "TimSort" };
+	void (*sort[4])(int*, int) = { NonRecursiveQuickSort, MergeSortRecursive, NaturalMergeSort, TimSort };
+	std::string names[4] = { "NonRecursiveQuickSort", "MergeSortRecursive", "NaturalMergeSort", "TimSort" };
 
 	array_input_data(array, N_4, file);
 
