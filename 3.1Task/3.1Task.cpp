@@ -67,95 +67,119 @@ void NonRecursiveQuickSort(int* a, int n)
 }
 
 
-void Merge(int a[], int split, int n) {
-    /* Слияние упорядоченных частей массива в буфер temp
-      с дальнейшим переносом содержимого temp обратно в массив a */
-    int pos1 = 0;	/* текущая позиция чтения из первой последовательности a[0]...a[split] */
-    int pos2 = split;	/*текущая позиция чтения из второй последовательности a[split]...a[n]*/
-    int pos3 = 0;  /*текущая позиция записи в temp*/
-
-    int* temp = (int*)malloc(sizeof(int) * n);
-    while (pos1 < split && pos2 < n) 	/*идет слияние, пока есть хоть один элемент в каждой последовательности*/
-    {
-        if (a[pos1] < a[pos2])
-            temp[pos3++] = a[pos1++];
-        else
-            temp[pos3++] = a[pos2++];
-    }
-    /* одна последовательность закончилась - копировать остаток другой в конец буфера */
-    while (pos2 < n)  			 /* пока вторая последовательность не пуста */
-        temp[pos3++] = a[pos2++];
-    while (pos1 < split)  		/* пока первая последовательность не пуста */
-        temp[pos3++] = a[pos1++];
-
-    /* скопировать буфер temp обратно в a */
-    for (pos3 = 0; pos3 < n; pos3++)
-        a[pos3] = temp[pos3];
-
-    free(temp);
-}
-
-void MergeSortRecursive(int* a, int n)
+void MergeSortNonRecursive(int* a, int n)
 {
-    int split;                   /* индекс, по которому делим массив */
-
-    if (n > 1)                 /* если есть более 1 элемента */
+    primary = secondary = 0;
+    clock_t start = clock();
+    int* temp = (int*)malloc(sizeof(int) * n);	/* вспомогательный массив */
+    int* p1, 	/* адрес элемента в одной серии */
+        * p2, 	/* адрес элемента в другой серии */
+        * p3, 	/* адрес элемента в формируемом массиве */
+        length = 1, 		/* длина серии */
+        len1 = 0, len2 = 0, 	/* текущие длины серий */
+        * end_a,				/* адрес конца массива a */
+        * end_temp;			/* адрес конца массива temp */
+    char flag = 0;			/* признак того, откуда куда идет перезапись: 0 - из сортируемого массива во вспомогательный, 1 - из вспомогательного в исходный */
+    int memory = 6 * sizeof(int *) + 3 * sizeof(int) + sizeof(char) + sizeof(int) * n;
+    while (++secondary && length < n)	/* пока длина серии меньше длины массива */
     {
-        split = n / 2;
-        MergeSortRecursive(a, split);       /* сортировать левую половину */
-        MergeSortRecursive(a + split, n - split);/* сортировать правую половину */
-        Merge(a, split, n);    /* слить результаты в общий массив */
+        p1 = a; p2 = a + length; p3 = temp; end_a = a + n; end_temp = temp + n; /* указатели ставим на стартовые позиции */
+        while (++primary && p3 < end_temp)			/* пока переписаны не все элементы массива */
+        {
+            len1 = 0;			/* в первой серии всегда будут элементы, устанавливаем счетчик в 0 */
+            if (++primary && p2 < end_a) 	/* если на вторую серию элементов в массиве хватает, */
+                len2 = 0;		/* то счетчик тоже устанавливаем в 0 */
+            else
+                len2 = length;	/* а если элементов не хватает, то серия не будет принимать участие в переписывании */
+            while (++secondary && len1 < length && ++secondary && len2 < length && ++primary && p2 < end_a)   /* пока в обеих сериях есть элементы */
+            {
+                if (++primary && *p1 <= *p2)						/* если значение в первой серии не больше, чем во второй, */
+                    *p3++ = *p1++, len1++;			/* то переписываем его в другой массив, увеличиваем счетчик изъятых элементов */
+                else
+                    *p3++ = *p2++, len2++;			/* иначе переписываем значение из второй серии */
+            }
+            while (++secondary && len1 < length && ++primary && p3 < end_temp)  	/* пока первая серия не пуста */
+                *p3++ = *p1++, len1++;					/* переписываем ее до конца во второй массив */
+            while (++secondary && len2 < length && ++primary && p3 < end_temp)   	/* пока вторая серия не пуста */
+                *p3++ = *p2++, len2++;					/* переписываем ее до конца во второй массив */
+            p1 += length; 			/* переставляем указатели на первые элементы следующих серий */
+            p2 += length;
+        }
+        length *= 2;			/* увеличиваем длину серии вдвое */
+        p3 = a;			/* меняем местами входной и выходной массивы */
+        a = temp;
+        temp = p3;
+        flag = !flag; 	/* меняем значение флага */
     }
+    if (++secondary && flag)	/* если флаг установлен, то упорядоченная последовательность находится во вспомогательном массиве */
+    {
+        for (p1 = temp, p2 = a; ++secondary && p1 < temp + n; *p1++ = *p2++);	/* переписываем ее в исходный */
+        free(a);												/* освобождаем память от вспомогательного массива */
+    }
+    else
+        free(temp);	/* иначе на вспомогательный массив указыает temp, освобождаем память от вспомогательного массива */
+    clock_t end = clock();
+    double time = (double)(end - start) / CLOCKS_PER_SEC;
+    std::cout << "   time = " << time << " seconds" << std::endl << "   memory = " << memory << " bytes" << std::endl << "   primary operations = " << primary << std::endl << "   secondary operations = " << secondary << std::endl << std::endl;
 }
+
 
 void NaturalMergeSort(int* a, int n)
 {
+    primary = secondary = 0;
+    clock_t start = clock();
     int split;                   /* индекс, по которому делим массив */
     int last, end, i, * p = a, * tmp;
     char flag = 0, sorted = 0;
     int pos1, pos2, pos3;
     tmp = (int*)malloc(n * sizeof(int));
+    int memory = 7 * sizeof(int) + 2 * sizeof(int*) + 2 * sizeof(char) + n * sizeof(int);
     do                 /* если есть более 1 элемента */
     {
         end = n; pos2 = pos3 = 0;
         do
         {
             p += pos2; end = n - pos3;
-            for (split = 1; split < end && p[split - 1] <= p[split]; split++); /*первая серия*/
-            if (split == n) { sorted = 1; break; }
+            for (split = 1; ++secondary && split < end && ++primary && p[split - 1] <= p[split]; split++); /*первая серия*/
+            if (++secondary && split == n) { sorted = 1; break; }
             pos1 = 0; pos2 = split;
-            while (pos1 < split && pos2 < end) 	/*идет слияние, пока есть хоть один элемент в каждой серии*/
+            while (++secondary && pos1 < split && ++secondary && pos2 < end) 	/*идет слияние, пока есть хоть один элемент в каждой серии*/
             {
-                if (p[pos1] < p[pos2])
+                if (++primary && p[pos1] < p[pos2])
                     tmp[pos3++] = p[pos1++];
                 else
                 {
                     tmp[pos3++] = p[pos2++];
-                    if (p[pos2] < p[pos2 - 1]) break;
+                    if (++primary && p[pos2] < p[pos2 - 1]) break;
                 }
             }
             /* одна последовательность закончилась - копировать остаток другой в конец буфера */
-            while (pos2 < end && tmp[pos3 - 1] <= p[pos2])  			 /* пока вторая последовательность не пуста */
+            while (++secondary && pos2 < end && ++primary && tmp[pos3 - 1] <= p[pos2])  			 /* пока вторая последовательность не пуста */
                 tmp[pos3++] = p[pos2++];
-            while (pos1 < split)  		/* пока первая последовательность не пуста */
+            while (++secondary && pos1 < split)  		/* пока первая последовательность не пуста */
                 tmp[pos3++] = p[pos1++];
-        } while (pos3 < n);
-        if (sorted) break;
+        } while (++secondary && pos3 < n);
+        if (++secondary && sorted) break;
         p = tmp;
         tmp = a;
         a = p;
         flag = !flag;
-    } while (split < n);
-    if (flag)
+    } while (++secondary && split < n);
+    if (++secondary && flag)
     {
-        for (pos1 = 0; pos1 < n; pos1++)
+        for (pos1 = 0; ++secondary && pos1 < n; pos1++)
             tmp[pos1] = a[pos1];
         free(a);
     }
     else
         free(tmp);
+    clock_t final = clock();
+    double time = (double)(final - start) / CLOCKS_PER_SEC;
+    std::cout << "   time = " << time << " seconds" << std::endl << "   memory = " << memory << " bytes" << std::endl << "   primary operations = " << primary << std::endl << "   secondary operations = " << secondary << std::endl << std::endl;
+
 }
 
+int memory = 0;
 typedef struct {
     int* beg; /* адрес начала последовательности */
     int len; /* длина последовательности */
@@ -166,7 +190,8 @@ typedef struct {
 int get_min_size(int n)
 {
     int r = 0;
-    while (n >= 64) {
+    memory += sizeof(int);
+    while (++secondary && n >= 64) {
         n >>= 1;
         r |= n & 1;
     }
@@ -177,8 +202,9 @@ int get_min_size(int n)
 void reverse(int* a, int n)
 {
     int i, j, tmp;
-    for (i = 0, j = n - 1; i < j; i++, j--)
-        if (a[i] != a[j])
+    memory += 3*sizeof(int);
+    for (i = 0, j = n - 1; ++secondary && i < j; i++, j--)
+        if (++primary && a[i] != a[j])
         {
             tmp = a[i];
             a[i] = a[j];
@@ -190,10 +216,11 @@ void reverse(int* a, int n)
 void insertion_sort(int* a, int n, int i) /*адрес начала массива, его размер, размер уже упорядоченной части*/
 {
     int j, x;
-    for (; i < n; ++i)
+    memory += 2 * sizeof(int);
+    for (; ++secondary && i < n; ++i)
     {
         x = a[i];
-        for (j = i; j && a[j - 1] > x; --j)
+        for (j = i; j && ++primary && a[j - 1] > x; --j)
             a[j] = a[j - 1];
         a[j] = x;
     }
@@ -208,40 +235,42 @@ void merge_copy_less(segment* seg)
     int pos2 = split;	/*текущая позиция чтения из второй последовательности a[split]...a[n]*/
     int pos3 = 0;  /*текущая позиция записи в результирующей последовательности*/
     int* temp;
-
-    if (seg[0].len < seg[1].len)
+    
+    if (++primary && seg[0].len < seg[1].len)
     {
         temp = (int*)malloc(sizeof(int) * split);
+        memory += 2 * sizeof(int*) + 5 * sizeof(int) + sizeof(int) * split;
         /*копируем первую последовательность во вспомогательный массив*/
-        for (pos1 = 0; pos1 < split; pos1++)
+        for (pos1 = 0; ++secondary && pos1 < split; pos1++)
             temp[pos1] = a[pos1];
         pos1 = 0;
-        while (pos1 < split && pos2 < n) 	/*идет слияние, пока есть хоть один элемент в каждой последовательности*/
-            if (temp[pos1] <= a[pos2])
+        while (++secondary && pos1 < split && ++secondary && pos2 < n) 	/*идет слияние, пока есть хоть один элемент в каждой последовательности*/
+            if (++primary && temp[pos1] <= a[pos2])
                 a[pos3++] = temp[pos1++];
             else
                 a[pos3++] = a[pos2++];
         /* одна последовательность закончилась - копировать остаток другой в конец буфера */
         /* даже если вторая последовательность не пуста, она уже на месте */
-        while (pos1 < split)  		/* пока первая последовательность не пуста */
+        while (++secondary && pos1 < split)  		/* пока первая последовательность не пуста */
             a[pos3++] = temp[pos1++];
     }
     else
     {
         temp = (int*)malloc(sizeof(int) * seg[1].len);
+        memory += sizeof(int) * seg[1].len;
         /*копируем вторую последовательность во вспомогательный массив*/
-        for (pos1 = 0, pos2 = split; pos2 < n; )
+        for (pos1 = 0, pos2 = split; ++secondary && pos2 < n; )
             temp[pos1++] = a[pos2++];
         /*в этом случае слияние производится справа налево*/
         pos1 = split - 1; pos2 = seg[1].len - 1; pos3 = n - 1;
-        while (pos1 >= 0 && pos2 >= 0) 	/*идет слияние, пока есть хоть один элемент в каждой последовательности*/
-            if (temp[pos2] > a[pos1])
+        while (++secondary && pos1 >= 0 && ++secondary && pos2 >= 0) 	/*идет слияние, пока есть хоть один элемент в каждой последовательности*/
+            if (++primary && temp[pos2] > a[pos1])
                 a[pos3--] = temp[pos2--];
             else
                 a[pos3--] = a[pos1--];
         /* одна последовательность закончилась - копировать остаток другой в конец буфера */
         /* даже если первая последовательность не пуста, она уже на месте */
-        while (pos2 >= 0)  		/* пока вторая последовательность не пуста */
+        while (++secondary && pos2 >= 0)  		/* пока вторая последовательность не пуста */
             a[pos3--] = temp[pos2--];
     }
     free(temp);
@@ -252,14 +281,16 @@ void merge_copy_less(segment* seg)
 int try_merge(segment* seg, int top)
 {
     int x, y, z;
-    while (top > 0) /*пока в стеке больше одного элемента*/
+    memory += 3 * sizeof(int);
+    while (++secondary && top > 0) /*пока в стеке больше одного элемента*/
     {
         x = seg[top].len;
         y = seg[top - 1].len;
         z = top > 1 ? seg[top - 2].len : 0;
-        if (top > 1 && z <= x + y) /*если в стеке не меньше трех элементов и третий сверху маловат*/
+        ++secondary;
+        if (++secondary && top > 1 && ++secondary && z <= x + y) /*если в стеке не меньше трех элементов и третий сверху маловат*/
         {
-            if (z < x)
+            if (++secondary && z < x)
             {
                 merge_copy_less(&seg[top - 2]); /*сливаем ZY*/
                 seg[top - 1] = seg[top]; /*корректируем стек*/
@@ -271,7 +302,7 @@ int try_merge(segment* seg, int top)
             top--;  /*стало на одну последовательность меньше*/
         }
         else
-            if (y <= x) /*если предпоследний не больше последнего*/
+            if (++secondary && y <= x) /*если предпоследний не больше последнего*/
             {
                 merge_copy_less(&seg[top - 1]); /*сливаем YX*/
                 top--;
@@ -284,38 +315,46 @@ int try_merge(segment* seg, int top)
 
 void TimSort(int* a, int n)
 {
+    primary = secondary = 0;
+    clock_t start = clock();
     int min_size = get_min_size(n);
     int size;
     int i, j = 0;
     /*стек координат последовательностей*/
     segment* seg = (segment*)malloc(((n - 1) / min_size + 1) * sizeof(segment));
     int t = -1; /*вершина стека*/
+    memory = 5 * sizeof(int) + ((n - 1) / min_size + 1) * sizeof(segment) + sizeof(segment*);
 
     /*формирование упорядоченных последовательностей*/
-    for (i = 0; i < n; i += size)
+    for (i = 0; ++secondary && i < n; i += size)
     {
-        for (j = i + 1; j < n && a[j - 1] >= a[j]; j++); /*поиск обратно упорядоченной последовательности*/
-        if (j != i + 1)
+        for (j = i + 1; ++secondary && j < n && ++primary && a[j - 1] >= a[j]; j++); /*поиск обратно упорядоченной последовательности*/
+        if (++secondary && j != i + 1)
             reverse(a + i, j - i);          /*переворачиваем найденную обратную последовательность*/
-        if (j != n && j - i < min_size)
+        if (++secondary && j != n && ++secondary && j - i < min_size)
         {
             size = n - i < min_size ? n - i : min_size;
+            ++secondary;
             insertion_sort(a + i, size, j - i); /*адрес начала фрагмента, его размер, размер упорядоченной части*/
             j = i + size;
         }
-        for (; j < n && a[j - 1] <= a[j]; j++); /*ищем конец последовательности, если она не закончилась*/
+        for (; ++secondary && j < n && ++primary && a[j - 1] <= a[j]; j++); /*ищем конец последовательности, если она не закончилась*/
         /*запоминаем адрес начала и длину последовательности в стеке*/
         seg[++t].beg = a + i;
         size = seg[t].len = j - i;
         t = try_merge(seg, t);
     }
     /*слияние всех оставшихся последовательностей*/
-    while (t > 0)
+    while (++secondary && t > 0)
     {
         merge_copy_less(&seg[t - 1]); /*сливаем две последние последовательности*/
         t--; /*количество последовательностей уменьшилось*/
     }
     free(seg);
+    clock_t final = clock();
+    double time = (double)(final - start) / CLOCKS_PER_SEC;
+    std::cout << "   time = " << time << " seconds" << std::endl << "   memory = " << memory << " bytes" << std::endl << "   primary operations = " << primary << std::endl << "   secondary operations = " << secondary << std::endl << std::endl;
+
 }
 
 void array_input_data(int* mas, int n, std::ifstream& f)
@@ -337,16 +376,11 @@ void copy_array(int N, int* in, int* out)
         in[i] = out[i];
 }
 
-void print_cnt()
-{
-    
-
-}
 void sorting(int* arr, int N, void (*sort)(int*, int), std::string name)
 {
     int* current_array = new int[N];
     copy_array(N, current_array, arr);
-    std::cout << std::endl << std::endl << "   " << name << " for N = " << N << std::endl;
+    std::cout << std::endl << std::endl << " " << name << " for N = " << N << std::endl;
     std::cout << " __________________________________" << std::endl;
     std::cout << "|                                  |" << std::endl;
     std::cout << "   Disordered:" << std::endl;
@@ -370,14 +404,14 @@ int main()
 	int* array = new int[N_4];
 	int values[4] = { N_1,N_2,N_3,N_4 };
 
-	void (*sort[4])(int*, int) = { NonRecursiveQuickSort, MergeSortRecursive, NaturalMergeSort, TimSort };
-	std::string names[4] = { "NonRecursiveQuickSort", "MergeSortRecursive", "NaturalMergeSort", "TimSort" };
+	void (*sort[4])(int*, int) = { NonRecursiveQuickSort, MergeSortNonRecursive, NaturalMergeSort, TimSort };
+	std::string names[4] = { "NonRecursiveQuickSort", "MergeSortNonRecursive", "NaturalMergeSort", "TimSort" };
 
 	array_input_data(array, N_4, file);
 
 	for (int i = 0; i < 4; i++)
 	{
-		for (int j = 0; j < 1; j++)
+		for (int j = 0; j < 4; j++)
 		{
 			sorting(array, values[i], sort[j], names[j]);
 		}
