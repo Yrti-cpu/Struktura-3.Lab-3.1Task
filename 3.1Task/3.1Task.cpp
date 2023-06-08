@@ -84,23 +84,23 @@ void MergeSortNonRecursive(int* a, int n)
     while (++secondary && length < n)	/* пока длина серии меньше длины массива */
     {
         p1 = a; p2 = a + length; p3 = temp; end_a = a + n; end_temp = temp + n; /* указатели ставим на стартовые позиции */
-        while (++primary && p3 < end_temp)			/* пока переписаны не все элементы массива */
+        while (++secondary && p3 < end_temp)			/* пока переписаны не все элементы массива */
         {
             len1 = 0;			/* в первой серии всегда будут элементы, устанавливаем счетчик в 0 */
-            if (++primary && p2 < end_a) 	/* если на вторую серию элементов в массиве хватает, */
+            if (++secondary && p2 < end_a) 	/* если на вторую серию элементов в массиве хватает, */
                 len2 = 0;		/* то счетчик тоже устанавливаем в 0 */
             else
                 len2 = length;	/* а если элементов не хватает, то серия не будет принимать участие в переписывании */
-            while (++secondary && len1 < length && ++secondary && len2 < length && ++primary && p2 < end_a)   /* пока в обеих сериях есть элементы */
+            while (++secondary && len1 < length && ++secondary && len2 < length && ++secondary && p2 < end_a)   /* пока в обеих сериях есть элементы */
             {
                 if (++primary && *p1 <= *p2)						/* если значение в первой серии не больше, чем во второй, */
                     *p3++ = *p1++, len1++;			/* то переписываем его в другой массив, увеличиваем счетчик изъятых элементов */
                 else
                     *p3++ = *p2++, len2++;			/* иначе переписываем значение из второй серии */
             }
-            while (++secondary && len1 < length && ++primary && p3 < end_temp)  	/* пока первая серия не пуста */
+            while (++secondary && len1 < length && ++secondary && p3 < end_temp)  	/* пока первая серия не пуста */
                 *p3++ = *p1++, len1++;					/* переписываем ее до конца во второй массив */
-            while (++secondary && len2 < length && ++primary && p3 < end_temp)   	/* пока вторая серия не пуста */
+            while (++secondary && len2 < length && ++secondary && p3 < end_temp)   	/* пока вторая серия не пуста */
                 *p3++ = *p2++, len2++;					/* переписываем ее до конца во второй массив */
             p1 += length; 			/* переставляем указатели на первые элементы следующих серий */
             p2 += length;
@@ -315,7 +315,7 @@ int try_merge(segment* seg, int top)
 
 void TimSort(int* a, int n)
 {
-    primary = secondary = 0;
+    memory = primary = secondary = 0;
     clock_t start = clock();
     int min_size = get_min_size(n);
     int size;
@@ -376,22 +376,39 @@ void copy_array(int N, int* in, int* out)
         in[i] = out[i];
 }
 
+void repeat(std::ofstream& f, int povtor, int* array)
+{
+    int* mas = new int[N_4];
+    int x = 0;
+    for (int i = 0; i < N_4 / povtor; i++)
+    {
+        x = array[i];
+        for (int j = 0; j < povtor; j++)
+        {
+            mas[i * povtor + j] = x;
+        }
+    }
+    std::random_shuffle(mas, mas + N_4);
+    for (int i = 0; i < N_4; i++)
+    {
+        f << mas[i];
+        f << " ";
+    }
+}
+
 void sorting(int* arr, int N, void (*sort)(int*, int), std::string name)
 {
-    int* current_array = new int[N];
-    copy_array(N, current_array, arr);
     std::cout << std::endl << std::endl << " " << name << " for N = " << N << std::endl;
     std::cout << " __________________________________" << std::endl;
     std::cout << "|                                  |" << std::endl;
     std::cout << "   Disordered:" << std::endl;
-    sort(current_array, N);
+    sort(arr, N);
     std::cout << "   Ordered (min->max):" << std::endl;
-    sort(current_array, N);
-    std::reverse(current_array, current_array + N);
+    sort(arr, N);
+    std::reverse(arr, arr + N);
     std::cout << "   Reverse ordered (max->min):" << std::endl;
-    sort(current_array, N);
-    std::cout << "|__________________________________|" << std::endl;
-    delete[] current_array;
+    sort(arr, N);
+    std::cout << "|__________________________________|" << std::endl;   
 
 }
 
@@ -403,22 +420,51 @@ int main()
 	std::ifstream file("test_numbers.txt");
 	int* array = new int[N_4];
 	int values[4] = { N_1,N_2,N_3,N_4 };
+    int povtor[4] = { 10,100,500,1000 };
 
 	void (*sort[4])(int*, int) = { NonRecursiveQuickSort, MergeSortNonRecursive, NaturalMergeSort, TimSort };
 	std::string names[4] = { "NonRecursiveQuickSort", "MergeSortNonRecursive", "NaturalMergeSort", "TimSort" };
+    std::string files[4] = { "1.txt", "2.txt", "3.txt", "4.txt" };
 
 	array_input_data(array, N_4, file);
-
+    std::cout << "==============================" << std::endl;
+    std::cout << "Basic level" << std::endl;
+    std::cout << "==============================" << std::endl;
 	for (int i = 0; i < 4; i++)
 	{
+        int* current_array = new int[values[i]];
 		for (int j = 0; j < 4; j++)
 		{
-			sorting(array, values[i], sort[j], names[j]);
+            copy_array(values[i], current_array, array);
+			sorting(current_array, values[i], sort[j], names[j]);
 		}
+        delete[] current_array;
 	}
 
 	file.close();
-	delete[] array;
+    std::cout << "\n==============================" << std::endl;
+    std::cout << "High level" << std::endl;
+    std::cout << "==============================" << std::endl;
+    for (int i = 0; i < 4; i++)
+    {
+        std::ofstream f(files[i]);
+        repeat(f, povtor[i], array);
+
+        f.close();
+    }
+
+    for (int i = 0; i < 4; i++)
+    {
+        std::ifstream file_with_repeat(files[i]);
+        array_input_data(array, N_4, file_with_repeat);
+        int* copy = new int[N_4];
+        for (int j = 0; j < 4; j++)
+        {
+            copy_array(N_4, copy, array);
+            sorting(copy, values[i], sort[j], names[j]);
+        }
+        delete[] copy;
+    }
 	return 0;
     
 
