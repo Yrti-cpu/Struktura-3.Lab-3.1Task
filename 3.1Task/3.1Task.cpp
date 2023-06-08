@@ -460,8 +460,9 @@ int main()
         int* copy = new int[N_4];
         for (int j = 0; j < 4; j++)
         {
+            std::cout << std::endl << " " << "Repeat keys = " << povtor[i];
             copy_array(N_4, copy, array);
-            sorting(copy, values[i], sort[j], names[j]);
+            sorting(copy, N_4, sort[j], names[j]);
         }
         delete[] copy;
     }
