@@ -190,7 +190,6 @@ typedef struct {
 int get_min_size(int n)
 {
     int r = 0;
-    memory += sizeof(int);
     while (++secondary && n >= 64) {
         n >>= 1;
         r |= n & 1;
@@ -202,7 +201,6 @@ int get_min_size(int n)
 void reverse(int* a, int n)
 {
     int i, j, tmp;
-    memory += 3*sizeof(int);
     for (i = 0, j = n - 1; ++secondary && i < j; i++, j--)
         if (++primary && a[i] != a[j])
         {
@@ -216,11 +214,10 @@ void reverse(int* a, int n)
 void insertion_sort(int* a, int n, int i) /*адрес начала массива, его размер, размер уже упорядоченной части*/
 {
     int j, x;
-    memory += 2 * sizeof(int);
     for (; ++secondary && i < n; ++i)
     {
         x = a[i];
-        for (j = i; j && ++primary && a[j - 1] > x; --j)
+        for (j = i; ++secondary && j && ++primary && a[j - 1] > x; --j)
             a[j] = a[j - 1];
         a[j] = x;
     }
@@ -239,7 +236,7 @@ void merge_copy_less(segment* seg)
     if (++primary && seg[0].len < seg[1].len)
     {
         temp = (int*)malloc(sizeof(int) * split);
-        memory += 2 * sizeof(int*) + 5 * sizeof(int) + sizeof(int) * split;
+        //memory = 2 * sizeof(int*) + 5 * sizeof(int) + sizeof(int) * split;
         /*копируем первую последовательность во вспомогательный массив*/
         for (pos1 = 0; ++secondary && pos1 < split; pos1++)
             temp[pos1] = a[pos1];
@@ -257,7 +254,7 @@ void merge_copy_less(segment* seg)
     else
     {
         temp = (int*)malloc(sizeof(int) * seg[1].len);
-        memory += sizeof(int) * seg[1].len;
+        memory = 2 * sizeof(int*) + 5 * sizeof(int) + sizeof(int) * seg[1].len;
         /*копируем вторую последовательность во вспомогательный массив*/
         for (pos1 = 0, pos2 = split; ++secondary && pos2 < n; )
             temp[pos1++] = a[pos2++];
@@ -281,7 +278,6 @@ void merge_copy_less(segment* seg)
 int try_merge(segment* seg, int top)
 {
     int x, y, z;
-    memory += 3 * sizeof(int);
     while (++secondary && top > 0) /*пока в стеке больше одного элемента*/
     {
         x = seg[top].len;
