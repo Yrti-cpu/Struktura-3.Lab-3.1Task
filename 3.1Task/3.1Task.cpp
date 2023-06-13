@@ -179,7 +179,7 @@ void NaturalMergeSort(int* a, int n)
 
 }
 
-int memory = 0;
+int memory = 0, maxi = 0;
 typedef struct {
     int* beg; /* адрес начала последовательности */
     int len; /* длина последовательности */
@@ -232,11 +232,15 @@ void merge_copy_less(segment* seg)
     int pos2 = split;	/*текущая позиция чтения из второй последовательности a[split]...a[n]*/
     int pos3 = 0;  /*текущая позиция записи в результирующей последовательности*/
     int* temp;
-    
+    int mem = 0;
     if (++primary && seg[0].len < seg[1].len)
     {
         temp = (int*)malloc(sizeof(int) * split);
-        //memory = 2 * sizeof(int*) + 5 * sizeof(int) + sizeof(int) * split;
+        mem = sizeof(int) * split;
+        if (mem > maxi)
+        {
+            maxi = mem;
+        }
         /*копируем первую последовательность во вспомогательный массив*/
         for (pos1 = 0; ++secondary && pos1 < split; pos1++)
             temp[pos1] = a[pos1];
@@ -254,7 +258,11 @@ void merge_copy_less(segment* seg)
     else
     {
         temp = (int*)malloc(sizeof(int) * seg[1].len);
-        memory = 2 * sizeof(int*) + 5 * sizeof(int) + sizeof(int) * seg[1].len;
+        mem =  sizeof(int) * seg[1].len;
+        if (mem > maxi)
+        {
+            maxi = mem;
+        }
         /*копируем вторую последовательность во вспомогательный массив*/
         for (pos1 = 0, pos2 = split; ++secondary && pos2 < n; )
             temp[pos1++] = a[pos2++];
@@ -311,7 +319,7 @@ int try_merge(segment* seg, int top)
 
 void TimSort(int* a, int n)
 {
-    memory = primary = secondary = 0;
+    maxi = memory = primary = secondary = 0;
     clock_t start = clock();
     int min_size = get_min_size(n);
     int size;
@@ -319,7 +327,7 @@ void TimSort(int* a, int n)
     /*стек координат последовательностей*/
     segment* seg = (segment*)malloc(((n - 1) / min_size + 1) * sizeof(segment));
     int t = -1; /*вершина стека*/
-    memory = 5 * sizeof(int) + ((n - 1) / min_size + 1) * sizeof(segment) + sizeof(segment*);
+    memory = 13 * sizeof(int) + ((n - 1) / min_size + 1) * sizeof(segment) + sizeof(segment*) + 2 * sizeof(int*);
 
     /*формирование упорядоченных последовательностей*/
     for (i = 0; ++secondary && i < n; i += size)
@@ -349,7 +357,7 @@ void TimSort(int* a, int n)
     free(seg);
     clock_t final = clock();
     double time = (double)(final - start) / CLOCKS_PER_SEC;
-    std::cout << "   time = " << time << " seconds" << std::endl << "   memory = " << memory << " bytes" << std::endl << "   primary operations = " << primary << std::endl << "   secondary operations = " << secondary << std::endl << std::endl;
+    std::cout << "   time = " << time << " seconds" << std::endl << "   memory = " << memory + maxi << " bytes" << std::endl << "   primary operations = " << primary << std::endl << "   secondary operations = " << secondary << std::endl << std::endl;
 
 }
 
